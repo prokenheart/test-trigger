@@ -11,7 +11,7 @@ Parameters:
     Description: TestQueue's arn
   QueueUrl:
     Type: String
-    Description: URL của SQS queue (dùng nếu cần)
+    Description: TestQueue's url
   DynamoDBTableStreamArn:
     Type: String
     Description: DynamoDB Table's stream arn
