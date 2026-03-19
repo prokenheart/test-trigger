@@ -5,6 +5,17 @@ Description: >
 
   Sample SAM Template for crud-lambda
 
+Parameters:
+  QueueArn:
+    Type: String
+    Description: TestQueue's arn
+  QueueUrl:
+    Type: String
+    Description: URL của SQS queue (dùng nếu cần)
+  DynamoDBTableStreamArn:
+    Type: String
+    Description: DynamoDB Table's stream arn
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -27,7 +38,8 @@ Resources:
   CRUDFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/
+      FunctionName: crud-function
+      CodeUri: crud-lambda/
       Handler: app.lambda_handler
       Runtime: python3.12
       Architectures:
@@ -51,6 +63,7 @@ Resources:
   StreamFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: trigged-function
       CodeUri: trigged-lambda/
       Handler: app.lambda_handler
       Runtime: python3.12
@@ -60,12 +73,68 @@ Resources:
         DynamoDBStream:
           Type: DynamoDB
           Properties:
-            Stream: arn:aws:dynamodb:ap-southeast-2:375065980285:table/user/stream/2026-03-18T08:09:49.899
+            Stream: !Ref DynamoDBTableStreamArn
             StartingPosition: LATEST
             BatchSize: 1
+  InvokerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: invoker-function
+      Runtime: python3.12
+      Handler: app.lambda_handler
+      CodeUri: invoker-lambda/
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt ProducerFunction.Arn
+      Events:
+        RandomUsersApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MyApi
+            Path: /random-users
+            Method: POST
+  ProducerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: producer-function
+      Runtime: python3.12
+      Handler: app.lambda_handler
+      CodeUri: producer-lambda/
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref QueueUrl
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: "*"
+  ConsumerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: consumer-lambda
+      Runtime: python3.12
+      Handler: app.lambda_handler
+      CodeUri: consumer-lambda/
+      MemorySize: 128
+      Timeout: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: user
+        - SQSPollerPolicy:
+            QueueName: TestQueue.fifo
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !Ref QueueArn
+            BatchSize: 5
 
 Outputs:
   MyApi:
     Description: API Gateway endpoint URL
       function
-    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Dev/users"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Dev/"

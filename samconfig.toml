@@ -17,9 +17,10 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
-stack_name = "crud-lambda"
-s3_prefix = "crud-lambda"
+stack_name = "test-trigger"
+s3_prefix = "test-trigger"
 image_repositories = []
+parameter_overrides = "QueueArn=\"arn:aws:sqs:ap-southeast-2:375065980285:TestQueue.fifo\" QueueUrl=\"https://sqs.ap-southeast-2.amazonaws.com/375065980285/TestQueue.fifo\" DynamoDBTableStreamArn=\"arn:aws:dynamodb:ap-southeast-2:375065980285:table/user/stream/2026-03-18T08:09:49.899\""
 
 [default.package.parameters]
 resolve_s3 = true
